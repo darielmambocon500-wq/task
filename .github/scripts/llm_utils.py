@@ -1,33 +1,23 @@
-# .github/scripts/llm_utils.py
 import os, requests
 
-# ✅ Load model from GitHub Actions vars, fallback to gpt-4o-mini
-MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 
-def llm(prompt: str) -> str:
+def llm(prompt: str, sys: str = "You generate concise, actionable plans and code diffs."):
     url = "https://api.openai.com/v1/chat/completions"
-
     headers = {
         "Authorization": f"Bearer {OPENAI_API_KEY}",
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
     }
-
     body = {
         "model": MODEL,
         "messages": [
-            {"role": "system", "content": "You are a helpful coding assistant."},
-            {"role": "user", "content": prompt},
+            {"role": "system", "content": sys},
+            {"role": "user", "content": prompt}
         ],
-        "temperature": 0,
+        "temperature": 0.2
     }
-
-    # 🔎 Debugging API response
     r = requests.post(url, headers=headers, json=body, timeout=60)
-    if r.status_code != 200:
-        print("❌ OpenAI API Error:", r.status_code, r.text)
-        r.raise_for_status()
-
-    data = r.json()
-    return data["choices"][0]["message"]["content"]
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"]
 
