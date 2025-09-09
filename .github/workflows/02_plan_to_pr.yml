@@ -1,1 +1,53 @@
+name: Plan → PR
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  pr:
+    if: contains(github.event.comment.body, 'APPROVE_PLAN')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup git
+        run: |
+          git config user.name "autopilot-bot"
+          git config user.email "autopilot@example.com"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install requests
+
+      - name: Create patch
+        id: gen
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+        run: |
+          python .github/scripts/plan_to_pr.py > autopilot.out
+          PR_TITLE=$(grep '^PR_TITLE::' autopilot.out | sed 's/PR_TITLE:: //')
+          echo "title=$PR_TITLE" >> $GITHUB_OUTPUT
+
+      - name: Apply patch
+        run: |
+          git checkout -b autopilot/issue-${{ github.event.issue.number }}
+          git apply --whitespace=fix autopilot.diff
+          git add -A
+          git commit -m "${{ steps.gen.outputs.title }}"
+          git push origin HEAD
+
+      - name: Open PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: gh pr create --fill --base ${{ github.event.repository.default_branch }}
 
