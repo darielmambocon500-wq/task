@@ -17,7 +17,7 @@ def llm(prompt: str, sys_msg: str = "You generate concise, actionable plans and 
     """
     url = "https://api.openai.com/v1/chat/completions"
     headers = {
-        "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "Authorization": f"Bearer {OPENAI_API_KEY}",  # never logged
         "Content-Type": "application/json",
     }
     body = {
@@ -30,8 +30,12 @@ def llm(prompt: str, sys_msg: str = "You generate concise, actionable plans and 
     }
 
     if DEBUG:
-        print("🟦 [DEBUG] Sending request to OpenAI:", file=sys.stderr)
-        print(json.dumps(body, indent=2), file=sys.stderr)
+        safe_body = dict(body)  # shallow copy
+        if "messages" in safe_body:
+            safe_body_preview = safe_body["messages"][-1]["content"][:300]
+            print("🟦 [DEBUG] Prompt Preview:", safe_body_preview, "...", file=sys.stderr)
+        else:
+            print("🟦 [DEBUG] No messages found in body", file=sys.stderr)
 
     try:
         r = requests.post(url, headers=headers, json=body, timeout=60)
@@ -46,11 +50,15 @@ def llm(prompt: str, sys_msg: str = "You generate concise, actionable plans and 
     data = r.json()
 
     if DEBUG:
-        print("🟩 [DEBUG] OpenAI response:", file=sys.stderr)
-        print(json.dumps(data, indent=2), file=sys.stderr)
+        if "choices" in data:
+            preview = data["choices"][0].get("message", {}).get("content", "")[:300]
+            print("🟩 [DEBUG] Response Preview:", preview, "...", file=sys.stderr)
+        else:
+            print("🟩 [DEBUG] No choices in response", file=sys.stderr)
 
     try:
         return data["choices"][0]["message"]["content"]
     except (KeyError, IndexError):
         print(f"❌ Unexpected API response: {data}", file=sys.stderr)
         sys.exit(1)
+
