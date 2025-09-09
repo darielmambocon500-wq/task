@@ -6,6 +6,8 @@ on:
 
 jobs:
   plan:
+    # Only run if the issue has the AUTOPILOT label
+    if: contains(join(github.event.issue.labels.*.name, ','), 'AUTOPILOT')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,27 +18,16 @@ jobs:
           python-version: '3.11'
 
       - name: Install deps
-        run: pip install requests pyyaml
+        run: pip install requests
 
       - name: Generate plan
-        id: gen
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
-        run: |
-          python .github/scripts/issue_to_plan.py > plan.out
-          PLAN_TEXT=$(cat plan.out)
-          echo "plan<<EOF" >> $GITHUB_OUTPUT
-          echo "$PLAN_TEXT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Post plan comment
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          gh issue comment ${{ github.event.issue.number }} --body "AUTOPILOT PLAN\n\n$(cat plan.out)"
+        run: python .github/scripts/issue_to_plan.py
 
