@@ -1,18 +1,20 @@
 # .github/scripts/llm_utils.py
 import os, requests
 
+# ✅ Load model from GitHub Actions vars, fallback to gpt-4o-mini
+MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 def llm(prompt: str) -> str:
     url = "https://api.openai.com/v1/chat/completions"
-    model = os.getenv("LLM_MODEL", "gpt-4o-mini")
-    api_key = os.getenv("OPENAI_API_KEY")
 
     headers = {
-        "Authorization": f"Bearer {api_key}",
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
         "Content-Type": "application/json",
     }
 
     body = {
-        "model": model,
+        "model": MODEL,
         "messages": [
             {"role": "system", "content": "You are a helpful coding assistant."},
             {"role": "user", "content": prompt},
