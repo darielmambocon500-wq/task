@@ -1,7 +1,9 @@
 name: Plan → PR
+
 on:
   issue_comment:
-    types: [created]
+    types: 
+      - created
 
 jobs:
   pr:
@@ -18,7 +20,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install deps
         run: pip install requests
@@ -32,7 +34,7 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
-          DEBUG: "true"   # 👈 added debug mode
+          DEBUG: "true"
         run: |
           python .github/scripts/plan_to_pr.py > autopilot.out
           PR_TITLE=$(grep '^PR_TITLE::' autopilot.out | sed 's/PR_TITLE:: //')
