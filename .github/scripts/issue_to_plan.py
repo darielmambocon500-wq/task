@@ -1,6 +1,5 @@
 import os, json, re
 from llm_utils import llm
-import requests
 
 issue_title = os.getenv("ISSUE_TITLE","")
 issue_body  = os.getenv("ISSUE_BODY","")
@@ -25,6 +24,8 @@ Keep output under 400 tokens. Use repo-friendly language.
 
 plan = llm(PLAN_PROMPT)
 
+# Post plan as a comment + add label PLAN_READY
+import requests
 headers={"Authorization":f"Bearer {gh_token}","Accept":"application/vnd.github+json"}
 owner, name = repo.split("/")
 api = f"https://api.github.com/repos/{owner}/{name}"
@@ -34,7 +35,4 @@ requests.post(f"{api}/issues/{issue_num}/comments",
 
 requests.post(f"{api}/issues/{issue_num}/labels",
               headers=headers,json={"labels": ["PLAN_READY"]})
-
 print("Plan posted and PLAN_READY label added.")
-
-
