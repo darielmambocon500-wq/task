@@ -54,8 +54,20 @@ jobs:
           git push origin HEAD
 
       - name: Open PR
+        id: pr
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: gh pr create --fill --base ${{ github.event.repository.default_branch }}
+        run: |
+          URL=$(gh pr create --fill --base ${{ github.event.repository.default_branch }} --json url -q .url)
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Reply with PR link
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} \
+            --body "🎉 Pull Request created: ${{ steps.pr.outputs.url }}"
+
 
 
