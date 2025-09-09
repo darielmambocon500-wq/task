@@ -6,68 +6,48 @@ on:
 
 jobs:
   pr:
-    if: contains(github.event.comment.body, 'APPROVE_PLAN')
+    # Run only if comment contains "APPROVE_PLAN" (case-insensitive)
+    if: contains(toLower(github.event.comment.body), 'approve_plan')
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      # Checkout the repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Setup git
+      # Debug: print comment for visibility in logs
+      - name: Debug comment body
+        run: echo "Comment was: ${{ github.event.comment.body }}"
+
+      # Setup Git
+      - name: Set up Git
         run: |
-          git config user.name "autopilot-bot"
-          git config user.email "autopilot@example.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      # Create branch from main
+      - name: Create branch from main
+        run: |
+          BRANCH="plan-${{ github.event.issue.number }}"
+          git fetch origin main
+          git checkout -b $BRANCH origin/main
+
+      # Push branch to remote
+      - name: Push branch
+        run: |
+          BRANCH="plan-${{ github.event.issue.number }}"
+          git push origin $BRANCH
+
+      # Create Pull Request
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
         with:
-          python-version: '3.11'
-
-      - name: Install deps
-        run: pip install requests
-
-      - name: Confirm trigger (reply to issue)
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          gh issue comment ${{ github.event.issue.number }} \
-            --body "✅ Plan approved — creating PR now. Please wait..."
-
-      - name: Create patch
-        id: gen
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          LLM_MODEL: ${{ vars.LLM_MODEL }}
-        run: |
-          python .github/scripts/plan_to_pr.py > autopilot.out
-          PR_TITLE=$(grep '^PR_TITLE::' autopilot.out | sed 's/PR_TITLE:: //')
-          echo "title=$PR_TITLE" >> $GITHUB_OUTPUT
-
-      - name: Apply patch
-        run: |
-          git checkout -b autopilot/issue-${{ github.event.issue.number }}
-          git apply --whitespace=fix autopilot.diff
-          git add -A
-          git commit -m "${{ steps.gen.outputs.title }}"
-          git push origin HEAD
-
-      - name: Open PR
-        id: pr
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          URL=$(gh pr create --fill --base ${{ github.event.repository.default_branch }} --json url -q .url)
-          echo "url=$URL" >> $GITHUB_OUTPUT
-
-      - name: Reply with PR link
-        if: success()
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          gh issue comment ${{ github.event.issue.number }} \
-            --body "🎉 Pull Request created: ${{ steps.pr.outputs.url }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: plan-${{ github.event.issue.number }}
+          title: "Plan → PR for issue #${{ github.event.issue.number }}"
+          body: |
+            This PR was automatically created from issue #${{ github.event.issue.number }}
+            Triggered by comment: `${{ github.event.comment.body }}`
 
 
 
