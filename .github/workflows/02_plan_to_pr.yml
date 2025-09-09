@@ -6,39 +6,32 @@ on:
 
 jobs:
   pr:
-    # Run only if comment contains "APPROVE_PLAN" (case-insensitive)
-    if: contains(toLower(github.event.comment.body), 'approve_plan')
     runs-on: ubuntu-latest
+    if: github.event.issue.pull_request == null && contains(toJSON(github.event.comment.body), 'APPROVE_PLAN')
 
     steps:
-      # Checkout the repo
+      - name: Debug Event
+        run: |
+          echo "Comment body:"
+          echo "${{ github.event.comment.body }}"
+          echo "Issue number:"
+          echo "${{ github.event.issue.number }}"
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Debug: print comment for visibility in logs
-      - name: Debug comment body
-        run: echo "Comment was: ${{ github.event.comment.body }}"
-
-      # Setup Git
       - name: Set up Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Create branch from main
-      - name: Create branch from main
+      - name: Create and push branch
         run: |
           BRANCH="plan-${{ github.event.issue.number }}"
           git fetch origin main
           git checkout -b $BRANCH origin/main
-
-      # Push branch to remote
-      - name: Push branch
-        run: |
-          BRANCH="plan-${{ github.event.issue.number }}"
           git push origin $BRANCH
 
-      # Create Pull Request
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
@@ -48,6 +41,3 @@ jobs:
           body: |
             This PR was automatically created from issue #${{ github.event.issue.number }}
             Triggered by comment: `${{ github.event.comment.body }}`
-
-
-
