@@ -1,24 +1,40 @@
-import os, requests, json
+import os, json, re
 from llm_utils import llm
+import requests
 
-GH_TOKEN = os.getenv("GH_TOKEN")
-REPO = os.getenv("GITHUB_REPOSITORY")
-ISSUE_NUMBER = os.getenv("ISSUE_NUMBER")
+issue_title = os.getenv("ISSUE_TITLE","")
+issue_body  = os.getenv("ISSUE_BODY","")
+repo        = os.getenv("GITHUB_REPOSITORY","")
+issue_num   = os.getenv("ISSUE_NUMBER","")
+gh_token    = os.getenv("GH_TOKEN")
 
-def get_issue_body():
-    url = f"https://api.github.com/repos/{REPO}/issues/{ISSUE_NUMBER}"
-    r = requests.get(url, headers={"Authorization": f"token {GH_TOKEN}"})
-    r.raise_for_status()
-    return r.json()["body"]
+PLAN_PROMPT = f"""
+You are the repo's project architect. From this issue, produce:
 
-def post_plan(plan: str):
-    url = f"https://api.github.com/repos/{REPO}/issues/{ISSUE_NUMBER}/comments"
-    body = {"body": f"### 🤖 Autopilot Plan\n\n{plan}"}
-    r = requests.post(url, headers={"Authorization": f"token {GH_TOKEN}"}, json=body)
-    r.raise_for_status()
+1) PLAN: bullet list of minimal steps to implement (≤10 bullets).
+2) FILES: list of files to add/change with short rationale.
+3) TESTS: quick checks we will run in CI.
+4) ACCEPTANCE: Done criteria in 3-5 lines.
 
-if __name__ == "__main__":
-    issue_text = get_issue_body()
-    plan = llm(f"Create a concise, actionable implementation plan for this GitHub issue:\n\n{issue_text}")
-    post_plan(plan)
+Issue Title: {issue_title}
+Issue Body:
+{issue_body}
+
+Keep output under 400 tokens. Use repo-friendly language.
+"""
+
+plan = llm(PLAN_PROMPT)
+
+headers={"Authorization":f"Bearer {gh_token}","Accept":"application/vnd.github+json"}
+owner, name = repo.split("/")
+api = f"https://api.github.com/repos/{owner}/{name}"
+
+requests.post(f"{api}/issues/{issue_num}/comments",
+              headers=headers,json={"body": f"### AUTOPILOT PLAN\n\n{plan}"})
+
+requests.post(f"{api}/issues/{issue_num}/labels",
+              headers=headers,json={"labels": ["PLAN_READY"]})
+
+print("Plan posted and PLAN_READY label added.")
+
 
