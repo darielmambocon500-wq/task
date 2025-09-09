@@ -1,34 +1,29 @@
 name: Plan → PR
+
 on:
   issue_comment:
     types: [created]
+
 jobs:
   pr:
     if: contains(github.event.comment.body, 'APPROVE_PLAN')
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup git
         run: |
           git config user.name "autopilot-bot"
           git config user.email "autopilot@example.com"
-   - name: Setup Python
-  uses: actions/setup-python@v5
-  with:
-    python-version: '3.11'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Install deps
         run: pip install requests
-              - name: Debug secrets
-        run: |
-          if [ -z "$OPENAI_API_KEY" ]; then
-            echo "❌ OPENAI_API_KEY is EMPTY"
-          else
-            echo "✅ OPENAI_API_KEY is set"
-            echo "🔑 First 10 chars: ${OPENAI_API_KEY:0:10}"
-            echo "🔑 Length: ${#OPENAI_API_KEY}"
-          fi
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       - name: Create patch
         id: gen
@@ -43,6 +38,7 @@ jobs:
           python .github/scripts/plan_to_pr.py > autopilot.out
           PR_TITLE=$(grep '^PR_TITLE::' autopilot.out | sed 's/PR_TITLE:: //')
           echo "title=$PR_TITLE" >> $GITHUB_OUTPUT
+
       - name: Apply patch
         run: |
           git checkout -b autopilot/issue-${{ github.event.issue.number }}
@@ -50,6 +46,7 @@ jobs:
           git add -A
           git commit -m "${{ steps.gen.outputs.title }}"
           git push origin HEAD
+
       - name: Open PR
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
