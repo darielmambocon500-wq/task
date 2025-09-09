@@ -2,30 +2,41 @@ name: Issue → Plan
 
 on:
   issues:
-    types:
-      - opened
-      - edited
+    types: [opened, edited]
 
 jobs:
   plan:
-    if: contains(github.event.issue.labels.*.name, 'AUTOPILOT')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
+
       - name: Install deps
-        run: pip install requests
+        run: pip install requests pyyaml
+
       - name: Generate plan
+        id: gen
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_BODY:  ${{ github.event.issue.body }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
-        run: python .github/scripts/issue_to_plan.py
+        run: |
+          python .github/scripts/issue_to_plan.py > plan.out
+          PLAN_TEXT=$(cat plan.out)
+          echo "plan<<EOF" >> $GITHUB_OUTPUT
+          echo "$PLAN_TEXT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post plan comment
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "AUTOPILOT PLAN\n\n$(cat plan.out)"
 
