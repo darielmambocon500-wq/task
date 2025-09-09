@@ -24,6 +24,13 @@ jobs:
       - name: Install deps
         run: pip install requests
 
+      - name: Confirm trigger (reply to issue)
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} \
+            --body "✅ Plan approved — creating PR now. Please wait..."
+
       - name: Create patch
         id: gen
         env:
@@ -50,4 +57,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: gh pr create --fill --base ${{ github.event.repository.default_branch }}
+
 
