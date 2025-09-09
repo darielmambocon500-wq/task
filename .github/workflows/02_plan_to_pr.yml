@@ -17,6 +17,18 @@ jobs:
         with: { python-version: '3.11' }
       - name: Install deps
         run: pip install requests
+              - name: Debug secrets
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "❌ OPENAI_API_KEY is EMPTY"
+          else
+            echo "✅ OPENAI_API_KEY is set"
+            echo "🔑 First 10 chars: ${OPENAI_API_KEY:0:10}"
+            echo "🔑 Length: ${#OPENAI_API_KEY}"
+          fi
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
       - name: Create patch
         id: gen
         env:
