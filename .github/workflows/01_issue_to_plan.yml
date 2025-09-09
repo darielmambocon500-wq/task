@@ -1,30 +1,24 @@
 name: Issue → Plan
-
 on:
   issues:
     types: [opened, edited]
-
 jobs:
   plan:
     if: contains(join(fromJson('["AUTOPILOT"]'), ','), 'AUTOPILOT') || contains(github.event.issue.labels.*.name, 'AUTOPILOT')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Python
         uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
+        with: { python-version: '3.11' }
       - name: Install deps
         run: pip install requests
-
       - name: Generate plan
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_BODY:  ${{ github.event.issue.body }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
