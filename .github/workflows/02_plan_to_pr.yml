@@ -1,5 +1,4 @@
 name: Plan → PR
-
 on:
   issue_comment:
     types: [created]
@@ -8,7 +7,6 @@ jobs:
   pr:
     if: contains(github.event.comment.body, 'APPROVE_PLAN')
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -34,6 +32,7 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
+          DEBUG: "true"   # 👈 added debug mode
         run: |
           python .github/scripts/plan_to_pr.py > autopilot.out
           PR_TITLE=$(grep '^PR_TITLE::' autopilot.out | sed 's/PR_TITLE:: //')
